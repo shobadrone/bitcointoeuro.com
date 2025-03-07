@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Chart container explicit styles */
+.chart-outer-container,
+.chart-inner-container,
+.chart-js-wrapper {
+  min-height: 300px !important;
+  width: 100% !important;
+  position: relative !important;
+  display: block !important;
+}
+
+/* Make sure the chart canvas fills its container */
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
 :root {
   --background: #121212;
   --card-background: #1E1E1E;

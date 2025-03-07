@@ -290,11 +290,18 @@ export default function PriceChart() {
         )}
       </div>
       
-      <div style={{
-        height: '300px', // Fixed height for desktop
-        position: 'relative',
-        margin: '0 auto'
-      }}>
+      <div 
+        style={{
+          height: '400px', // Increased explicit height
+          minHeight: '400px', // Ensure minimum height
+          width: '100%', // Explicit width
+          position: 'relative',
+          margin: '0 auto',
+          border: '1px solid var(--border)', // Visual debugging aid
+          overflow: 'hidden' // Prevent overflow issues
+        }}
+        className="chart-outer-container" // Add a specific class for debugging
+      >
         {showLoadingState ? (
           <div style={{
             display: 'flex',
@@ -376,15 +383,20 @@ export default function PriceChart() {
               Debug: {historicalData.data.length} points | {selectedTimeFrame}
             </div>
             
-            {/* Chart container with explicit dimensions */}
+            {/* Chart container with explicit dimensions and debugging attributes */}
             <div 
               style={{ 
                 width: '100%', 
                 height: '100%',
                 position: 'relative',
-                minHeight: '300px' 
+                minHeight: '350px',
+                minWidth: '300px',
+                backgroundColor: 'rgba(0, 0, 0, 0.02)', // Slight background for visual debugging
+                border: '1px dashed rgba(59, 130, 246, 0.1)' // Debugging border
               }}
-              className="chart-container"
+              className="chart-inner-container"
+              id="chart-container"
+              data-testid="chart-container"
             >
               <ChartComponent 
                 data={formatChartData()} 

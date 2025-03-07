@@ -69,15 +69,92 @@ export function PriceChartInner({ data, options }: PriceChartInnerProps) {
     );
   }
   
-  // Apply enhanced options
+  // Apply enhanced options with debugging
   const enhancedOptions = {
     ...options,
     responsive: true,
     maintainAspectRatio: false,
+    devicePixelRatio: 1, // Force 1:1 pixel ratio to avoid scaling issues
+    animation: {
+      duration: 0 // Disable animations for initial rendering
+    },
     onResize: (chart: any, size: any) => {
       console.log('[DEBUG] Chart resized:', size);
+      
+      // Update debug element with size info
+      const debugEl = document.getElementById('chart-size-debug');
+      if (debugEl) {
+        debugEl.textContent = `Canvas: ${size.width}x${size.height}`;
+      }
+    },
+    // Add initial animation for debug purposes
+    plugins: {
+      ...(options.plugins || {}),
+      legend: {
+        display: false,
+      },
+      // Add a custom debug plugin
+      customCanvasBackgroundColor: {
+        beforeDraw: (chart: any) => {
+          const ctx = chart.canvas.getContext('2d');
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+          ctx.fillRect(0, 0, chart.width, chart.height);
+          ctx.restore();
+          
+          // Log chart dimensions
+          console.log(`[DEBUG] Chart canvas size: ${chart.width}x${chart.height}`);
+        }
+      }
     }
   };
   
-  return <Line data={data} options={enhancedOptions} />;
+  // Add a wrapper div with explicit dimensions to ensure chart has proper container
+  return (
+    <div 
+      style={{ 
+        width: '100%', 
+        height: '100%',
+        position: 'relative',
+        minHeight: '300px',
+        display: 'block'
+      }}
+      className="chart-js-wrapper"
+    >
+      <div id="chart-size-debug" style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        padding: '2px 4px',
+        fontSize: '8px',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        color: 'white',
+        zIndex: 999
+      }}/>
+      
+      <Line 
+        data={data} 
+        options={enhancedOptions}
+        // Log rendering in console
+        ref={(ref) => {
+          if (ref) {
+            console.log('[DEBUG] Chart ref dimensions:', {
+              canvas: ref.canvas,
+              width: ref.canvas?.width,
+              height: ref.canvas?.height,
+              style: ref.canvas?.style,
+              parentNode: ref.canvas?.parentNode,
+              parent: ref.canvas?.parentElement,
+            });
+            
+            // Update size debug element
+            const debugEl = document.getElementById('chart-size-debug');
+            if (debugEl && ref.canvas) {
+              debugEl.textContent = `Canvas: ${ref.canvas.width}x${ref.canvas.height}`;
+            }
+          }
+        }}
+      />
+    </div>
+  );
 }
