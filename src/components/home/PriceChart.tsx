@@ -1,31 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
-  Title, 
-  Tooltip, 
-  Legend,
-  Filler
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
 import useHistoricalPrices from '@/lib/api/useHistoricalPrices';
 import { TimeFrame } from '@/lib/api/historicalData';
+import dynamic from 'next/dynamic';
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+// Dynamically import Chart.js and Line component with no SSR
+const ChartComponent = dynamic(
+  () => import('./PriceChartInner').then((mod) => mod.PriceChartInner),
+  { ssr: false }
 );
 
 export default function PriceChart() {
@@ -393,9 +376,20 @@ export default function PriceChart() {
               Debug: {historicalData.data.length} points | {selectedTimeFrame}
             </div>
             
-            {/* Chart container */}
-            <div style={{ width: '100%', height: '100%' }}>
-              <Line data={formatChartData()} options={options} />
+            {/* Chart container with explicit dimensions */}
+            <div 
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                position: 'relative',
+                minHeight: '300px' 
+              }}
+              className="chart-container"
+            >
+              <ChartComponent 
+                data={formatChartData()} 
+                options={options}
+              />
             </div>
           </>
         )}
