@@ -22,12 +22,9 @@ export async function getHistoricalPriceData(
   timeFrame: TimeFrame,
   currentPrice?: BitcoinPriceData
 ): Promise<HistoricalPriceData> {
-<<<<<<< HEAD
-=======
   console.log('[DEBUG] getHistoricalPriceData called with timeFrame:', timeFrame);
   console.log('[DEBUG] currentPrice available:', currentPrice ? 'yes' : 'no');
   
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
   try {
     let days: number;
     let interval: string;
@@ -54,13 +51,9 @@ export async function getHistoricalPriceData(
         days = 60;
         interval = 'daily';
     }
-<<<<<<< HEAD
-
-=======
     
     console.log('[DEBUG] Fetching from CoinGecko:', { days, interval });
     
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
     const response = await axios.get(
       `${COINGECKO_API_URL}/coins/bitcoin/market_chart`,
       {
@@ -71,8 +64,6 @@ export async function getHistoricalPriceData(
         }
       }
     );
-<<<<<<< HEAD
-=======
     
     console.log('[DEBUG] CoinGecko API response received:', {
       status: response.status,
@@ -80,7 +71,6 @@ export async function getHistoricalPriceData(
       hasPrices: response.data?.prices ? 'yes' : 'no',
       dataPointCount: response.data?.prices?.length || 0
     });
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
 
     if (!response.data || !response.data.prices || !Array.isArray(response.data.prices)) {
       throw new Error('Invalid response from CoinGecko API');
@@ -135,17 +125,12 @@ export async function getHistoricalPriceDataFallback(
   timeFrame: TimeFrame,
   currentPrice?: BitcoinPriceData
 ): Promise<HistoricalPriceData> {
-<<<<<<< HEAD
-  try {
-    // Get historical data from LiveCoinWatch
-=======
   console.log('[DEBUG] Fallback function called for timeFrame:', timeFrame);
   console.log('[DEBUG] LCW API KEY present:', process.env.NEXT_PUBLIC_LCW_API_KEY ? 'yes' : 'no');
   
   try {
     // Get historical data from LiveCoinWatch
     console.log('[DEBUG] Attempting to fetch data from LiveCoinWatch...');
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
     const priceData = await getLiveCoinWatchHistorical(timeFrame);
 
     // Calculate change percentage

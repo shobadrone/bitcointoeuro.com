@@ -14,9 +14,6 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import useHistoricalPrices from '@/lib/api/useHistoricalPrices';
-<<<<<<< HEAD
-import { TimeFrame } from '@/lib/api/historicalData';
-=======
 import { TimeFrame, HistoricalPricePoint } from '@/lib/api/historicalData';
 
 // Simple fallback chart component that uses basic HTML/CSS/SVG when Chart.js fails
@@ -172,7 +169,6 @@ const SimpleFallbackChart = ({ data }: { data: HistoricalPricePoint[] }) => {
     </div>
   );
 };
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
 
 // Register ChartJS components
 ChartJS.register(
@@ -226,8 +222,6 @@ export default function PriceChart() {
       }
     };
   }, [isDataLoading]);
-<<<<<<< HEAD
-=======
   
   // Force initial data fetch when component mounts
   useEffect(() => {
@@ -279,7 +273,6 @@ export default function PriceChart() {
       chartJsWorks,
     });
   }, [selectedTimeFrame, isLoading, isDataLoading, isError, historicalData, chartJsWorks]);
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
 
   // Format data for Chart.js
   const formatChartData = () => {
@@ -561,10 +554,6 @@ export default function PriceChart() {
               Try Again
             </button>
           </div>
-<<<<<<< HEAD
-        ) : (
-          <Line data={formatChartData()} options={options} />
-=======
         ) : (!historicalData || !historicalData.data || historicalData.data.length === 0) ? (
           <div style={{
             display: 'flex',
@@ -631,7 +620,6 @@ export default function PriceChart() {
               )}
             </div>
           </>
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
         )}
       </div>
       

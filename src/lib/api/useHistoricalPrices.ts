@@ -1,8 +1,5 @@
 import useSWR from 'swr';
-<<<<<<< HEAD
-=======
 import { useEffect } from 'react';
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
 import { getHistoricalPriceData, TimeFrame, HistoricalPriceData } from './historicalData';
 import useBitcoinPrice from './useBitcoinPrice';
 
@@ -18,8 +15,6 @@ export default function useHistoricalPrices(timeFrame: TimeFrame = '60d') {
   // Get current price data to use for the most recent point
   const { price: currentPrice } = useBitcoinPrice();
   
-<<<<<<< HEAD
-=======
   // Debug logging for hook initialization
   useEffect(() => {
     console.log('[DEBUG] useHistoricalPrices hook initialized:', { 
@@ -29,14 +24,10 @@ export default function useHistoricalPrices(timeFrame: TimeFrame = '60d') {
     });
   }, [timeFrame, currentPrice]);
   
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
   // Fetch historical data with very aggressive caching (much longer than real-time price)
   // Use timeFrame in the key to ensure different caching per timeframe
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     `historical-prices-${timeFrame}`,
-<<<<<<< HEAD
-    currentPrice ? createFetcher(currentPrice, timeFrame) : null, // Only fetch when current price is available
-=======
     // Still try to fetch data even if currentPrice is not available
     async () => {
       console.log('[DEBUG] SWR fetcher function called for timeFrame:', timeFrame);
@@ -52,7 +43,6 @@ export default function useHistoricalPrices(timeFrame: TimeFrame = '60d') {
         throw err;
       }
     },
->>>>>>> 6896a16e695165a3bb7e5d25afdab4d53296d331
     {
       refreshInterval: 3600000, // Refresh every hour (much less frequent than current price)
       revalidateOnFocus: false, // Don't revalidate on focus for historical data
