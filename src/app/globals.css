@@ -2,21 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Chart container explicit styles */
-.chart-outer-container,
-.chart-inner-container,
-.chart-js-wrapper {
-  min-height: 300px !important;
+/* ApexCharts container styles */
+.chart-container {
+  min-height: 350px !important;
+  height: 400px !important;
   width: 100% !important;
   position: relative !important;
   display: block !important;
+  box-sizing: border-box !important;
 }
 
-/* Make sure the chart canvas fills its container */
-canvas {
-  width: 100% !important;
+/* ApexCharts wrapper needs to be full size */
+.apexcharts-wrapper {
   height: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Override ApexCharts styles for dark mode */
+.apexcharts-tooltip {
+  background: rgba(17, 24, 39, 0.9) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+.apexcharts-tooltip-title {
+  background: rgba(17, 24, 39, 0.9) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+.apexcharts-xaxis-label,
+.apexcharts-yaxis-label {
+  fill: rgba(156, 163, 175, 0.9) !important;
+}
+
+/* Fix potential rendering issues with height */
+.apexcharts-canvas {
+  margin: 0 auto !important;
   display: block !important;
+}
+
+/* Fix tooltip text color */
+.apexcharts-tooltip-text {
+  color: #EDEDED !important;
 }
 
 :root {

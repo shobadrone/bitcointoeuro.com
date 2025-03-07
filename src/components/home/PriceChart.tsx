@@ -5,17 +5,26 @@ import useHistoricalPrices from '@/lib/api/useHistoricalPrices';
 import { TimeFrame } from '@/lib/api/historicalData';
 import dynamic from 'next/dynamic';
 
-// Dynamically import Chart.js and Line component with no SSR
-const ChartComponent = dynamic(
-  () => import('./PriceChartInner').then((mod) => mod.PriceChartInner),
-  { ssr: false }
-);
+// Type definition to prevent TypeScript errors with ApexCharts
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'apex-charts': any;
+    }
+  }
+}
+
+// Dynamic import of ApexCharts with SSR disabled
+// This is critical for Next.js to avoid SSR rendering issues with ApexCharts
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export default function PriceChart() {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>('60d');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showLoadingState, setShowLoadingState] = useState<boolean>(false);
+  const [chartMounted, setChartMounted] = useState<boolean>(false);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const chartRef = useRef<any>(null);
   
   const { historicalData, isLoading: isDataLoading, isError, mutate } = useHistoricalPrices(selectedTimeFrame);
   
@@ -51,10 +60,12 @@ export default function PriceChart() {
       }
     };
   }, [isDataLoading]);
-  
-  // Force initial data fetch when component mounts
+
+  // On mount confirmation (client-side only)
   useEffect(() => {
-    // Small delay to ensure other hooks have initialized
+    setChartMounted(true);
+    
+    // Force initial data fetch when component mounts
     const timer = setTimeout(() => {
       console.log('[DEBUG] PriceChart: Triggering initial data fetch');
       console.log('[DEBUG] ENV VAR CHECK:', process.env.NEXT_PUBLIC_LCW_API_KEY ? 'API key is set' : 'API key is NOT set');
@@ -64,167 +75,185 @@ export default function PriceChart() {
     return () => clearTimeout(timer);
   }, [mutate]);
 
-  // Format data for Chart.js
-  const formatChartData = () => {
-    if (!historicalData || !historicalData.data || historicalData.data.length === 0) {
-      return {
-        labels: [],
-        datasets: [{
-          data: [],
-          borderColor: 'rgba(59, 130, 246, 1)',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        }]
-      };
-    }
-
-    // Format dates based on timeframe
-    const formatDate = (timestamp: number) => {
-      const date = new Date(timestamp);
-      
+  // Format dates based on timeframe - reused by both tooltip and axes
+  const formatDate = (timestamp: number, forTooltip = false) => {
+    const date = new Date(timestamp);
+    
+    if (forTooltip) {
+      // More detailed format for tooltips
+      switch (selectedTimeFrame) {
+        case '7d':
+        case '60d':
+          return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        case '1y':
+          return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        case '5y':
+          return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        default:
+          return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    } else {
+      // Shorter format for axis labels
       switch (selectedTimeFrame) {
         case '7d':
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         case '60d':
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         case '1y':
-          // For 1 year, we want to show the first day of the week
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         case '5y':
-          // For 5 years, only show month and year
           return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
         default:
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       }
-    };
-
-    const labels = historicalData.data.map(point => formatDate(point.timestamp));
-    const prices = historicalData.data.map(point => point.price);
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Bitcoin Price (EUR)',
-          data: prices,
-          borderColor: 'rgba(59, 130, 246, 1)',
-          borderWidth: 2,
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: (ctx) => {
-            // Show points only at start, end, and if there are few data points
-            const count = ctx.chart.data.labels?.length || 0;
-            if (count < 15) return 3;
-            
-            const index = ctx.dataIndex;
-            return (index === 0 || index === count - 1) ? 4 : 0;
-          },
-          pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-        },
-      ],
-    };
+    }
   };
 
-  // Chart options
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        mode: 'index' as const,
-        intersect: false,
-        backgroundColor: 'rgba(17, 24, 39, 0.9)',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        borderColor: 'rgba(59, 130, 246, 0.2)',
-        borderWidth: 1,
-        padding: 10,
-        displayColors: false,
-        callbacks: {
-          title: function(context: any) {
-            if (!context || context.length === 0) return '';
-            
-            const date = new Date(historicalData?.data[context[0].dataIndex]?.timestamp || 0);
-            
-            // Format tooltip date based on timeframe
-            switch (selectedTimeFrame) {
-              case '7d':
-              case '60d':
-                return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              case '1y':
-                // For year view, show the week number and date
-                return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              case '5y':
-                // For 5-year view, show month and year only
-                return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-              default:
-                return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-            }
-          },
-          label: function(context: any) {
-            return `${new Intl.NumberFormat('de-DE', { 
-              style: 'currency', 
-              currency: 'EUR' 
-            }).format(context.raw)}`;
+  // Format data for ApexCharts - convert historical data to series format
+  const formatApexData = () => {
+    if (!historicalData || !historicalData.data || historicalData.data.length === 0) {
+      console.log('[DEBUG] No historical data available for chart');
+      return {
+        series: [{
+          name: 'Bitcoin Price (EUR)',
+          data: []
+        }],
+        categories: []
+      };
+    }
+    
+    const timestamps = historicalData.data.map(point => point.timestamp);
+    const prices = historicalData.data.map(point => point.price);
+    const categories = timestamps.map(ts => formatDate(ts));
+    
+    // Data integrity check
+    console.log('[DEBUG] Chart data integrity check:');
+    console.log(`Categories: ${categories.length} items, First: "${categories[0]}", Last: "${categories[categories.length-1]}"`);
+    console.log(`Prices: ${prices.length} items, First: ${prices[0]}, Last: ${prices[prices.length-1]}`);
+    
+    // Format data for ApexCharts
+    const series = [{
+      name: 'Bitcoin Price (EUR)',
+      data: prices
+    }];
+    
+    return { series, categories };
+  };
+
+  // ApexCharts options - similar appearance to original Chart.js but with ApexCharts format
+  const getChartOptions = () => {
+    const { categories } = formatApexData();
+    
+    const options = {
+      chart: {
+        type: 'area',
+        height: 400,
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        background: 'transparent',
+        toolbar: {
+          show: false
+        },
+        animations: {
+          enabled: true, // Enable animations, but can be disabled if causing issues
+          dynamicAnimation: {
+            enabled: true
           }
         }
       },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-          drawBorder: false,
-        },
-        ticks: {
-          color: 'rgba(156, 163, 175, 0.9)',
-          font: {
-            size: 10,
-          },
-          maxRotation: 0,
-          maxTicksLimit: 12, // Limit the number of X-axis labels
-        },
+      dataLabels: {
+        enabled: false
       },
-      y: {
-        grid: {
-          color: 'rgba(75, 85, 99, 0.1)',
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'dark',
+          type: 'vertical',
+          opacityFrom: 0.3,
+          opacityTo: 0.0
+        }
+      },
+      stroke: {
+        curve: 'smooth',
+        width: 2
+      },
+      colors: ['#3B82F6'], // Primary blue color
+      grid: {
+        borderColor: 'rgba(75, 85, 99, 0.1)',
+        row: {
+          opacity: 0.5
+        }
+      },
+      markers: {
+        size: categories.length < 15 ? 4 : 0,
+        strokeWidth: 2,
+        strokeColors: '#FFFFFF',
+        colors: '#3B82F6'
+      },
+      xaxis: {
+        categories: categories,
+        labels: {
+          style: {
+            colors: 'rgba(156, 163, 175, 0.9)',
+            fontSize: '10px'
+          },
+          rotate: 0
         },
-        ticks: {
-          color: 'rgba(156, 163, 175, 0.9)',
-          callback: function(value: any) {
+        axisBorder: {
+          show: false
+        },
+        axisTicks: {
+          show: false
+        },
+        tooltip: {
+          enabled: false
+        }
+      },
+      yaxis: {
+        labels: {
+          formatter: function(value) {
             return new Intl.NumberFormat('de-DE', { 
               style: 'currency', 
               currency: 'EUR',
               notation: 'compact' 
             }).format(value);
           },
-          font: {
-            size: 10,
-          },
+          style: {
+            colors: 'rgba(156, 163, 175, 0.9)',
+            fontSize: '10px'
+          }
+        }
+      },
+      tooltip: {
+        theme: 'dark',
+        shared: true,
+        intersect: false,
+        y: {
+          formatter: function(value) {
+            return new Intl.NumberFormat('de-DE', { 
+              style: 'currency', 
+              currency: 'EUR' 
+            }).format(value);
+          }
         },
-      },
-    },
-    elements: {
-      line: {
-        tension: 0.4, // Smoother curves
-      },
-    },
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
-  };
-
-  const timeFrameLabels = {
-    '7d': '7 Days',
-    '60d': '60 Days',
-    '1y': '1 Year',
-    '5y': '5 Years'
+        x: {
+          formatter: function(value, { series, seriesIndex, dataPointIndex }) {
+            if (historicalData?.data?.[dataPointIndex]?.timestamp) {
+              return formatDate(historicalData.data[dataPointIndex].timestamp, true);
+            }
+            return value.toString();
+          }
+        },
+        style: {
+          fontSize: '12px',
+          fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+        },
+        marker: {
+          show: true
+        }
+      }
+    };
+    
+    return options;
   };
 
   // Format percentage change with + or - sign
@@ -233,6 +262,13 @@ export default function PriceChart() {
     return value >= 0 
       ? `+${formattedValue}%` 
       : `${formattedValue}%`;
+  };
+
+  const timeFrameLabels = {
+    '7d': '7 Days',
+    '60d': '60 Days',
+    '1y': '1 Year',
+    '5y': '5 Years'
   };
 
   return (
@@ -292,15 +328,15 @@ export default function PriceChart() {
       
       <div 
         style={{
-          height: '400px', // Increased explicit height
-          minHeight: '400px', // Ensure minimum height
-          width: '100%', // Explicit width
+          height: '400px',
+          minHeight: '400px',
+          width: '100%',
           position: 'relative',
           margin: '0 auto',
-          border: '1px solid var(--border)', // Visual debugging aid
-          overflow: 'hidden' // Prevent overflow issues
+          borderRadius: '8px',
+          overflow: 'hidden'
         }}
-        className="chart-outer-container" // Add a specific class for debugging
+        className="chart-container"
       >
         {showLoadingState ? (
           <div style={{
@@ -337,7 +373,7 @@ export default function PriceChart() {
           }}>
             <p>Failed to load price history data.</p>
             <button 
-              onClick={() => handleTimeFrameChange(selectedTimeFrame)} // This will trigger a refresh
+              onClick={() => handleTimeFrameChange(selectedTimeFrame)}
               style={{
                 backgroundColor: 'var(--accent)',
                 color: 'white',
@@ -379,29 +415,29 @@ export default function PriceChart() {
           </div>
         ) : (
           <>
-            <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 999, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px', fontSize: '10px' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 9, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px', fontSize: '10px' }}>
               Debug: {historicalData.data.length} points | {selectedTimeFrame}
             </div>
             
-            {/* Chart container with explicit dimensions and debugging attributes */}
+            {/* ApexCharts wrapper - only render when on client side */}
             <div 
               style={{ 
                 width: '100%', 
                 height: '100%',
-                position: 'relative',
-                minHeight: '350px',
-                minWidth: '300px',
-                backgroundColor: 'rgba(0, 0, 0, 0.02)', // Slight background for visual debugging
-                border: '1px dashed rgba(59, 130, 246, 0.1)' // Debugging border
+                position: 'relative'
               }}
-              className="chart-inner-container"
-              id="chart-container"
-              data-testid="chart-container"
+              className="apexcharts-wrapper"
+              id="apexcharts-wrapper"
             >
-              <ChartComponent 
-                data={formatChartData()} 
-                options={options}
-              />
+              {chartMounted && (
+                <ReactApexChart
+                  options={getChartOptions()}
+                  series={formatApexData().series}
+                  type="area"
+                  height="100%"
+                  width="100%"
+                />
+              )}
             </div>
           </>
         )}
