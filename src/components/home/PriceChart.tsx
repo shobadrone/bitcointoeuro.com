@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import useHistoricalPrices from '@/lib/api/useHistoricalPrices';
+import useBitcoinPrice from '@/lib/api/useBitcoinPrice';
 import { TimeFrame } from '@/lib/api/historicalData';
 import dynamic from 'next/dynamic';
 
@@ -26,7 +27,9 @@ export default function PriceChart() {
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chartRef = useRef<any>(null);
   
+  // Get both historical and current price data
   const { historicalData, isLoading: isDataLoading, isError, mutate } = useHistoricalPrices(selectedTimeFrame);
+  const { currentPrice } = useBitcoinPrice();
   
   // Force refresh when timeframe changes
   const handleTimeFrameChange = (newTimeFrame: TimeFrame) => {
@@ -187,7 +190,45 @@ export default function PriceChart() {
         size: categories.length < 15 ? 4 : 0,
         strokeWidth: 2,
         strokeColors: '#FFFFFF',
-        colors: '#3B82F6'
+        colors: '#3B82F6',
+        // Always show marker for the last point (current price)
+        discrete: [
+          {
+            seriesIndex: 0,
+            dataPointIndex: historicalData?.data?.length - 1,
+            size: 6,
+            strokeColor: '#FFFFFF',
+            fillColor: currentPrice ? '#10B981' : '#3B82F6'
+          }
+        ]
+      },
+      annotations: {
+        points: currentPrice ? [
+          {
+            x: categories[categories.length - 1],
+            y: historicalData?.data?.[historicalData.data.length - 1]?.price,
+            marker: {
+              size: 0 // Hide duplicate marker
+            },
+            label: {
+              text: 'Latest',
+              borderColor: '#10B981',
+              style: {
+                background: '#10B981',
+                color: '#fff',
+                fontSize: '10px',
+                fontWeight: 600,
+                padding: {
+                  left: 5,
+                  right: 5,
+                  top: 2,
+                  bottom: 2
+                }
+              },
+              offsetY: -15
+            }
+          }
+        ] : []
       },
       xaxis: {
         categories: categories,
@@ -232,21 +273,37 @@ export default function PriceChart() {
         theme: 'dark',
         shared: true,
         intersect: false,
-        y: {
-          formatter: function(value) {
-            return new Intl.NumberFormat('de-DE', { 
-              style: 'currency', 
-              currency: 'EUR' 
-            }).format(value);
+        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+          // Check if this is the last data point and we have current price data
+          const isLastPoint = dataPointIndex === historicalData?.data?.length - 1;
+          let price = series[seriesIndex][dataPointIndex];
+          
+          // If it's the last point and we have current price, use that instead
+          if (isLastPoint && currentPrice) {
+            price = currentPrice;
           }
-        },
-        x: {
-          formatter: function(value, { series, seriesIndex, dataPointIndex }) {
-            if (historicalData?.data?.[dataPointIndex]?.timestamp) {
-              return formatDate(historicalData.data[dataPointIndex].timestamp, true);
-            }
-            return value.toString();
+          
+          const formattedPrice = new Intl.NumberFormat('de-DE', { 
+            style: 'currency', 
+            currency: 'EUR' 
+          }).format(price);
+          
+          // Format the date
+          let dateStr = "";
+          if (historicalData?.data?.[dataPointIndex]?.timestamp) {
+            dateStr = formatDate(historicalData.data[dataPointIndex].timestamp, true);
+          } else {
+            dateStr = w.globals.labels[dataPointIndex];
           }
+          
+          // Create custom tooltip
+          return (
+            '<div class="apexcharts-tooltip-custom" style="padding: 8px; background: rgba(17, 24, 39, 0.9); color: white; border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 4px;">' +
+            '<div style="font-weight: bold; margin-bottom: 4px;">' + dateStr + '</div>' +
+            '<div>' + formattedPrice + '</div>' +
+            (isLastPoint && currentPrice ? '<div style="margin-top: 4px; font-size: 9px;">(real-time price)</div>' : '') +
+            '</div>'
+          );
         },
         style: {
           fontSize: '12px',
