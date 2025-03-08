@@ -74,6 +74,7 @@ export default function RootLayout({
         <meta name="Anthropic-Robots" content="noindex, nocache" />
         <meta name="OpenAI-Robots" content="noindex, nocache" />
         <meta name="AI-Robots" content="noindex, nocache" />
+        <meta name="impact-site-verification" value="3121b2bd-18bb-4fae-872e-999006b50099" />
       </head>
       <body style={{
         minHeight: '100vh',
