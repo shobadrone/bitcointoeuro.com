@@ -191,12 +191,17 @@ export default function PriceChart() {
       },
       xaxis: {
         categories: categories,
+        tickAmount: selectedTimeFrame === '7d' ? undefined : 
+                   selectedTimeFrame === '60d' ? 8 : 
+                   selectedTimeFrame === '1y' ? 6 : 
+                   selectedTimeFrame === '5y' ? 7 : undefined,
         labels: {
           style: {
             colors: 'rgba(156, 163, 175, 0.9)',
             fontSize: '10px'
           },
-          rotate: 0
+          rotate: 0,
+          hideOverlappingLabels: true
         },
         axisBorder: {
           show: false
