@@ -1,25 +1,27 @@
 import useSWR from 'swr';
-import { getBitcoinPrice, getBitcoinPriceFallback, BitcoinPriceData } from './pricedata_fetch';
+import { BitcoinPriceData } from './pricedata_fetch';
+import axios from 'axios';
 
-// Create a fetcher function that includes fallback logic
+// Create a fetcher function that calls our server API
 const fetcher = async (): Promise<BitcoinPriceData> => {
   try {
-    return await getBitcoinPrice();
-  } catch (_error) {
-    // If primary source fails, try the fallback
-    return await getBitcoinPriceFallback();
+    const response = await axios.get('/api/bitcoin-price');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Bitcoin price from API:', error);
+    throw error;
   }
 };
 
-export default function useBitcoinPrice(refreshInterval = 60000) {
+export default function useBitcoinPrice(refreshInterval = 5000) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     'bitcoin-price',
     fetcher,
     {
-      refreshInterval, // Refresh every minute by default
+      refreshInterval, // Refresh every 5 seconds by default to match server cache
       revalidateOnFocus: false, // Don't revalidate on focus to reduce API calls
-      dedupingInterval: 30000, // Deduplicate requests within 30 seconds
-      focusThrottleInterval: 60000, // Throttle focus revalidation to once per minute
+      dedupingInterval: 3000, // Deduplicate requests within 3 seconds
+      focusThrottleInterval: 5000, // Throttle focus revalidation
       errorRetryCount: 3, // Only retry 3 times on error
       
       // Persist cache in localStorage to maintain price data between page loads
