@@ -63,7 +63,7 @@ export default function AboutSection() {
               gap: '1rem'
             }}>
               {[
-                'Exchange rate comparisons across major platforms',
+                'Bitcoin sentiment analysis based on market trends',
                 'Educational resources about Bitcoin and cryptocurrency'
               ].map((feature, index) => (
                 <li key={index} style={{
