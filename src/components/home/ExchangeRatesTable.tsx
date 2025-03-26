@@ -190,7 +190,7 @@ export default function ExchangeRatesTable() {
                               e.currentTarget.style.backgroundColor = 'var(--accent)';
                             }}
                           >
-                            Exchange BTC/EUR now
+                            Exchange BTC/EUR
                           </a>
                         </div>
                       </td>
