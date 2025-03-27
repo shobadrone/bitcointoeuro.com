@@ -1,0 +1,16 @@
+{
+  "name": "Bitcoin to Euro Calculator and Exchange Rates",
+  "short_name": "BTC to EUR",
+  "description": "Bitcoin to Euro information with calculator, historic data and real-time exchange rates. Get accurate BTC to EUR exchange information and exchange options.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -11,9 +11,8 @@ export default function ExchangeRatesTable() {
 
   useEffect(() => {
     if (rates && rates.length > 0) {
-      // Sort rates with the lowest price first
-      const sortedRates = [...rates].sort((a, b) => a.price - b.price);
-      setFormattedRates(sortedRates);
+      // Keep original sort order, we'll identify min/max in the render
+      setFormattedRates([...rates]);
       
       // Format last updated time
       const date = new Date(rates[0].lastUpdated);
@@ -26,6 +25,15 @@ export default function ExchangeRatesTable() {
       );
     }
   }, [rates]);
+
+  // Find the exchanges with min and max prices
+  const lowestPrice = formattedRates.length > 0 
+    ? Math.min(...formattedRates.map(rate => rate.price))
+    : 0;
+    
+  const highestPrice = formattedRates.length > 0 
+    ? Math.max(...formattedRates.map(rate => rate.price))
+    : 0;
 
   return (
     <div style={{
@@ -133,15 +141,19 @@ export default function ExchangeRatesTable() {
                   </tr>
                 </thead>
                 <tbody>
-                  {formattedRates.map((rate, index) => (
+                  {formattedRates.map((rate) => {
+                    const isBestBuyRate = Math.abs(rate.price - lowestPrice) < 0.01; // Allow small floating point differences
+                    const isBestSellRate = Math.abs(rate.price - highestPrice) < 0.01;
+                    
+                    return (
                     <tr key={rate.exchangeName} style={{
-                      backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.05)' : 'transparent'
+                      backgroundColor: isBestBuyRate || isBestSellRate ? 'rgba(59, 130, 246, 0.05)' : 'transparent'
                     }}>
                       <td style={{
                         padding: '16px',
                         borderBottom: '1px solid var(--border)',
                         color: 'var(--foreground)',
-                        fontWeight: index === 0 ? 600 : 400,
+                        fontWeight: isBestBuyRate || isBestSellRate ? 600 : 400,
                       }}>
                         <div style={{
                           display: 'flex',
@@ -149,9 +161,9 @@ export default function ExchangeRatesTable() {
                           alignItems: 'flex-start',
                           gap: '8px'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                             {rate.exchangeName}
-                            {index === 0 && (
+                            {isBestBuyRate && (
                               <span style={{
                                 marginLeft: '8px',
                                 padding: '2px 6px',
@@ -161,7 +173,20 @@ export default function ExchangeRatesTable() {
                                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
                                 color: 'var(--success)',
                               }}>
-                                BEST RATE
+                                BEST BUY RATE
+                              </span>
+                            )}
+                            {isBestSellRate && (
+                              <span style={{
+                                marginLeft: '8px',
+                                padding: '2px 6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                color: 'var(--error)',
+                              }}>
+                                BEST SELL RATE
                               </span>
                             )}
                           </div>
@@ -199,7 +224,7 @@ export default function ExchangeRatesTable() {
                         borderBottom: '1px solid var(--border)',
                         textAlign: 'right',
                         color: 'var(--foreground)',
-                        fontWeight: index === 0 ? 600 : 400,
+                        fontWeight: isBestBuyRate || isBestSellRate ? 600 : 400,
                       }}>
                         {new Intl.NumberFormat('de-DE', {
                           style: 'currency',
@@ -213,12 +238,13 @@ export default function ExchangeRatesTable() {
                         borderBottom: '1px solid var(--border)',
                         textAlign: 'right',
                         color: 'var(--muted)',
-                        fontWeight: index === 0 ? 600 : 400,
+                        fontWeight: isBestBuyRate || isBestSellRate ? 600 : 400,
                       }}>
                         {rate.fees}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -231,9 +257,19 @@ export default function ExchangeRatesTable() {
             }}>
               <p>Last updated at: {lastUpdated || 'Loading...'}</p>
               <p style={{ 
+                fontSize: '0.85rem', 
+                marginTop: '0.75rem',
+                maxWidth: '700px',
+                margin: '0.75rem auto'
+              }}>
+                <span style={{ color: 'var(--success)', fontWeight: 600 }}>BEST BUY RATE</span>: Lowest price to buy Bitcoin with EUR. &nbsp;&nbsp; 
+                <span style={{ color: 'var(--error)', fontWeight: 600 }}>BEST SELL RATE</span>: Highest price to sell Bitcoin for EUR.
+              </p>
+              <p style={{ 
                 fontSize: '0.8rem', 
                 marginTop: '0.5rem',
-                maxWidth: '600px'
+                maxWidth: '600px',
+                margin: '0.5rem auto'
               }}>
                 Note: Fees may vary based on account tier, trading volume, and payment method. Please check each exchange for current fee information.
               </p>

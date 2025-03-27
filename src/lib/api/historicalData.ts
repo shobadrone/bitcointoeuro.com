@@ -4,7 +4,7 @@ import { getLiveCoinWatchHistorical } from './livecoinwatch';
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 
-export type TimeFrame = '7d' | '60d' | '1y' | '5y';
+export type TimeFrame = '7d' | '60d';
 
 export interface HistoricalPricePoint {
   timestamp: number; // Unix timestamp in milliseconds
@@ -38,14 +38,6 @@ export async function getHistoricalPriceData(
       case '60d':
         days = 60;
         interval = 'daily';
-        break;
-      case '1y':
-        days = 365;
-        interval = 'weekly';
-        break;
-      case '5y':
-        days = 1825; // 5 years approximately
-        interval = 'monthly';
         break;
       default:
         days = 60;

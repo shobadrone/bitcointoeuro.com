@@ -108,7 +108,7 @@ async function testFullErrorHandling(timeFrame: TimeFrame) {
 
 // Run tests for each timeframe
 async function runTests() {
-  const timeFrames: TimeFrame[] = ['7d', '60d', '1y', '5y'];
+  const timeFrames: TimeFrame[] = ['7d', '60d'];
   
   console.log('=== FALLBACK MECHANISM TEST ===\n');
   

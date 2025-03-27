@@ -17,7 +17,14 @@ export async function GET() {
     // Return cached data if it's still fresh (less than 1 minute old)
     if (cache && currentTime - cache.timestamp < CACHE_DURATION) {
       console.log('Serving exchange rates from cache');
-      return NextResponse.json(cache.rates);
+      
+      // Add cache control headers to help browsers cache the response
+      return NextResponse.json(cache.rates, {
+        headers: {
+          'Cache-Control': `public, max-age=${Math.floor(CACHE_DURATION / 1000)}`,
+          'Expires': new Date(currentTime + CACHE_DURATION).toUTCString()
+        }
+      });
     }
     
     // Cache is stale or doesn't exist, fetch new data
@@ -30,14 +37,26 @@ export async function GET() {
       timestamp: currentTime,
     };
     
-    return NextResponse.json(rates);
+    // Add cache headers to successful response
+    return NextResponse.json(rates, {
+      headers: {
+        'Cache-Control': `public, max-age=${Math.floor(CACHE_DURATION / 1000)}`,
+        'Expires': new Date(currentTime + CACHE_DURATION).toUTCString()
+      }
+    });
   } catch (error) {
     console.error('Error fetching exchange rates:', error);
     
     // Return stale cache if available, otherwise error
     if (cache) {
       console.log('Error occurred, serving stale cache');
-      return NextResponse.json(cache.rates);
+      // Return stale cache with cache headers
+      return NextResponse.json(cache.rates, {
+        headers: {
+          'Cache-Control': `public, max-age=${Math.floor(CACHE_DURATION / 2000)}`, // Half the normal duration for stale cache
+          'Expires': new Date(currentTime + (CACHE_DURATION / 2)).toUTCString()
+        }
+      });
     }
     
     // No cache available, return error
