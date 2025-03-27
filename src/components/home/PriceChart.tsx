@@ -27,13 +27,20 @@ export default function PriceChart() {
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chartRef = useRef<any>(null);
   
+  // Define whether we're using direct approach (for 60d) or API approach
+  const useDirect = selectedTimeFrame === '60d';
+  
   // Get both historical and current price data
   const { historicalData, isLoading: isDataLoading, isError, mutate } = useHistoricalPrices(selectedTimeFrame);
   const { currentPrice } = useBitcoinPrice();
   
   // Force refresh when timeframe changes
   const handleTimeFrameChange = (newTimeFrame: TimeFrame) => {
-    setSelectedTimeFrame(newTimeFrame);
+    // If user had 5y or 1y selected previously (from localStorage or old version)
+    // default to 60d timeframe
+    const validTimeFrame = ['7d', '60d'].includes(newTimeFrame) ? newTimeFrame : '60d';
+    
+    setSelectedTimeFrame(validTimeFrame);
     
     // Set a small timeout to ensure the SWR key has updated before mutating
     setTimeout(() => {
@@ -70,8 +77,6 @@ export default function PriceChart() {
     
     // Force initial data fetch when component mounts
     const timer = setTimeout(() => {
-      console.log('[DEBUG] PriceChart: Triggering initial data fetch');
-      console.log('[DEBUG] ENV VAR CHECK:', process.env.NEXT_PUBLIC_LCW_API_KEY ? 'API key is set' : 'API key is NOT set');
       mutate();
     }, 100);
     
@@ -88,10 +93,6 @@ export default function PriceChart() {
         case '7d':
         case '60d':
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        case '1y':
-          return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        case '5y':
-          return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
         default:
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
       }
@@ -102,10 +103,6 @@ export default function PriceChart() {
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         case '60d':
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        case '1y':
-          return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        case '5y':
-          return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
         default:
           return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       }
@@ -129,7 +126,7 @@ export default function PriceChart() {
     const prices = historicalData.data.map(point => point.price);
     const categories = timestamps.map(ts => formatDate(ts));
     
-    // Data integrity check
+    // Data integrity check - helpful for debugging display issues
     console.log('[DEBUG] Chart data integrity check:');
     console.log(`Categories: ${categories.length} items, First: "${categories[0]}", Last: "${categories[categories.length-1]}"`);
     console.log(`Prices: ${prices.length} items, First: ${prices[0]}, Last: ${prices[prices.length-1]}`);
@@ -233,9 +230,7 @@ export default function PriceChart() {
       xaxis: {
         categories: categories,
         tickAmount: selectedTimeFrame === '7d' ? undefined : 
-                   selectedTimeFrame === '60d' ? 8 : 
-                   selectedTimeFrame === '1y' ? 6 : 
-                   selectedTimeFrame === '5y' ? 7 : undefined,
+                   selectedTimeFrame === '60d' ? 8 : undefined,
         labels: {
           style: {
             colors: 'rgba(156, 163, 175, 0.9)',
@@ -328,9 +323,7 @@ export default function PriceChart() {
 
   const timeFrameLabels = {
     '7d': '7 Days',
-    '60d': '60 Days',
-    '1y': '1 Year',
-    '5y': '5 Years'
+    '60d': '60 Days'
   };
 
   return (
@@ -477,10 +470,6 @@ export default function PriceChart() {
           </div>
         ) : (
           <>
-            <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 9, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px', fontSize: '10px' }}>
-              Debug: {historicalData.data.length} points | {selectedTimeFrame}
-            </div>
-            
             {/* ApexCharts wrapper - only render when on client side */}
             <div 
               style={{ 
@@ -512,7 +501,7 @@ export default function PriceChart() {
         marginTop: '1.5rem',
         gap: '0.5rem'
       }}>
-        {(['7d', '60d', '1y', '5y'] as TimeFrame[]).map((timeFrame) => (
+        {(['7d', '60d'] as TimeFrame[]).map((timeFrame) => (
           <button
             key={timeFrame}
             onClick={() => handleTimeFrameChange(timeFrame)}

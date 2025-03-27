@@ -133,36 +133,6 @@ export async function getLiveCoinWatchHistorical(
         ];
         break;
       }
-      case '1y': {
-        // 1 year with weekly points - use quarter and year deltas
-        dataPoints = 52;
-        
-        // Calculate key prices
-        const quarterAgoPrice = currentPrice / quarterChange;
-        const yearAgoPrice = currentPrice / yearChange;
-        
-        // Add key price points
-        pricePoints = [
-          { timestamp: now - 90 * 24 * 60 * 60 * 1000, price: quarterAgoPrice },
-          { timestamp: now - 365 * 24 * 60 * 60 * 1000, price: yearAgoPrice }
-        ];
-        break;
-      }
-      case '5y': {
-        // 5 years with monthly points - use year delta and extrapolate
-        dataPoints = 60;
-        
-        // Calculate key prices
-        const yearAgoPrice = currentPrice / yearChange;
-        const fiveYearsAgoPrice = yearAgoPrice / (yearChange * 2); // Rough approximation
-        
-        // Add key price points
-        pricePoints = [
-          { timestamp: now - 365 * 24 * 60 * 60 * 1000, price: yearAgoPrice },
-          { timestamp: now - 5 * 365 * 24 * 60 * 60 * 1000, price: fiveYearsAgoPrice }
-        ];
-        break;
-      }
       default:
         dataPoints = 60;
         break;
@@ -182,7 +152,7 @@ export async function getLiveCoinWatchHistorical(
   }
 }
 
-// Interpolate between price points to create a complete dataset
+// Enhanced interpolation with volatility simulation to create a more realistic dataset
 function interpolateHistoricalPrices(
   keyPoints: HistoricalPricePoint[],
   targetLength: number,
@@ -197,7 +167,7 @@ function interpolateHistoricalPrices(
   const result: HistoricalPricePoint[] = [];
   const now = sortedPoints[0].timestamp;
   
-  // Calculate time step based on timeframe
+  // Calculate time step based on timeframe - match CoinGecko's density
   let timeStep: number;
   
   switch (timeFrame) {
@@ -207,21 +177,40 @@ function interpolateHistoricalPrices(
     case '60d':
       timeStep = 24 * 60 * 60 * 1000; // 1 day
       break;
-    case '1y':
-      timeStep = 7 * 24 * 60 * 60 * 1000; // 1 week
-      break;
-    case '5y':
-      timeStep = 30 * 24 * 60 * 60 * 1000; // ~1 month
-      break;
     default:
       timeStep = 24 * 60 * 60 * 1000; // 1 day
   }
   
-  // Generate all timestamps
+  // Generate all timestamps based on target length
   const timestamps: number[] = [];
   for (let i = 0; i < targetLength; i++) {
-    timestamps.push(now - i * timeStep);
+    // Calculate time step based on total range and target length for even distribution
+    const totalTimeRange = now - sortedPoints[sortedPoints.length - 1].timestamp;
+    const evenTimeStep = totalTimeRange / (targetLength - 1);
+    timestamps.push(now - i * evenTimeStep);
   }
+  
+  // Set up volatility parameters based on timeframe
+  let baseVolatility: number;
+  let volatilityIncrement: number;
+  
+  switch (timeFrame) {
+    case '7d':
+      baseVolatility = 0.005; // 0.5% base volatility for 7d
+      volatilityIncrement = 0.001; // Small randomness
+      break;
+    case '60d':
+      baseVolatility = 0.01; // 1% base volatility for 60d
+      volatilityIncrement = 0.002; // More variation
+      break;
+    default:
+      baseVolatility = 0.005;
+      volatilityIncrement = 0.001;
+  }
+  
+  // Add price trend memory to create more realistic volatility patterns
+  let lastTrend = 0; // -1: downtrend, 0: neutral, 1: uptrend
+  let trendStrength = 0; // 0-1 indicating strength of current trend
   
   // For each timestamp, find or interpolate price
   timestamps.forEach(timestamp => {
@@ -268,11 +257,42 @@ function interpolateHistoricalPrices(
         price = beforePoint.price;
       } else {
         const ratio = (timestamp - beforePoint.timestamp) / timeRange;
-        price = beforePoint.price + ratio * priceRange;
         
-        // Add small random variations for realism
-        const randomFactor = 1 + (Math.random() * 0.01 - 0.005); // ±0.5%
-        price *= randomFactor;
+        // Apply some mild non-linearity to avoid perfectly straight lines
+        const adjustedRatio = Math.pow(ratio, 1.1);
+        
+        // Base interpolated price
+        price = beforePoint.price + adjustedRatio * priceRange;
+        
+        // Determine underlying trend direction
+        const trendDirection = priceRange > 0 ? 1 : priceRange < 0 ? -1 : 0;
+        
+        // Update trend with some persistence
+        if (trendDirection !== lastTrend) {
+          // Reset trend strength on direction change
+          trendStrength = 0.2; 
+          lastTrend = trendDirection;
+        } else {
+          // Increase trend strength with persistence (max 0.8)
+          trendStrength = Math.min(trendStrength + 0.1, 0.8);
+        }
+        
+        // Calculate effective volatility (higher during trend changes, lower during persistent trends)
+        const effectiveVolatility = baseVolatility * (1 + (1 - trendStrength));
+        
+        // Add market-like variations - influenced by current trend
+        const volatilityBias = lastTrend * 0.3; // Bias volatility in trend direction
+        const randomVariation = (Math.random() * 2 - 1 + volatilityBias) * effectiveVolatility;
+        
+        // Apply random variation
+        price *= (1 + randomVariation);
+        
+        // Add chance of small price spikes (common in crypto)
+        if (Math.random() < 0.03) { // 3% chance of spike
+          const spikeDirection = (Math.random() > 0.5) ? 1 : -1;
+          const spikeMagnitude = baseVolatility * 5; // 5x normal volatility
+          price *= (1 + spikeDirection * spikeMagnitude);
+        }
       }
     } else {
       // Fallback

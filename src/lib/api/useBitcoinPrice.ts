@@ -13,16 +13,17 @@ const fetcher = async (): Promise<BitcoinPriceData> => {
   }
 };
 
-export default function useBitcoinPrice(refreshInterval = 5000) {
+export default function useBitcoinPrice(refreshInterval = 30000) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     'bitcoin-price',
     fetcher,
     {
-      refreshInterval, // Refresh every 5 seconds by default to match server cache
+      refreshInterval, // Refresh every 30 seconds by default to match server cache
       revalidateOnFocus: false, // Don't revalidate on focus to reduce API calls
-      dedupingInterval: 3000, // Deduplicate requests within 3 seconds
-      focusThrottleInterval: 5000, // Throttle focus revalidation
+      dedupingInterval: 15000, // Deduplicate requests within 15 seconds
+      focusThrottleInterval: 30000, // Throttle focus revalidation
       errorRetryCount: 3, // Only retry 3 times on error
+      revalidateIfStale: false, // Don't automatically revalidate stale data
       
       // Persist cache in localStorage to maintain price data between page loads
       provider: () => {

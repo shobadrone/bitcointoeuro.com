@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import useBitcoinPrice from '@/lib/api/useBitcoinPrice';
 
 export default function PriceDisplay() {
-  const { price, isLoading, isError } = useBitcoinPrice(5000); // Update every 5 seconds
+  const { price, isLoading, isError } = useBitcoinPrice(30000); // Update every 30 seconds
   const [formattedPrice, setFormattedPrice] = useState('Loading...');
   const [priceChange, setPriceChange] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');

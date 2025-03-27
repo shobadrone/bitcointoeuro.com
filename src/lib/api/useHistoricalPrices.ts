@@ -1,55 +1,46 @@
 import useSWR from 'swr';
-import { useEffect } from 'react';
+import axios from 'axios';
 import { getHistoricalPriceData, TimeFrame, HistoricalPriceData } from './historicalData';
 import useBitcoinPrice from './useBitcoinPrice';
 
-// Create a fetcher function that includes current price data and uses the timeframe
-const createFetcher = (currentPrice: any, timeFrameParam: TimeFrame) => {
+// Direct fetcher for CoinGecko (used in production) 
+const directFetcher = (currentPrice: any, timeFrameParam: TimeFrame) => {
   return async (): Promise<HistoricalPriceData> => {
     // Pass the specific timeframe to ensure we get the right data
     return await getHistoricalPriceData(timeFrameParam, currentPrice);
   };
 };
 
+// API endpoint fetcher (new approach with server-side caching)
+const apiFetcher = async (timeFrame: TimeFrame): Promise<HistoricalPriceData> => {
+  try {
+    const response = await axios.get(`/api/historical-prices?timeframe=${timeFrame}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching historical price data from API:', error);
+    throw error;
+  }
+};
+
 export default function useHistoricalPrices(timeFrame: TimeFrame = '60d') {
   // Get current price data to use for the most recent point
   const { price: currentPrice } = useBitcoinPrice();
   
-  // Debug logging for hook initialization
-  useEffect(() => {
-    console.log('[DEBUG] useHistoricalPrices hook initialized:', { 
-      timeFrame,
-      currentPriceAvailable: currentPrice ? 'yes' : 'no',
-      env: typeof window !== 'undefined' ? 'client' : 'server'
-    });
-  }, [timeFrame, currentPrice]);
+  // For 60-day timeframe, use the direct approach to ensure data consistency with production
+  const useDirect = timeFrame === '60d';
   
-  // Fetch historical data with very aggressive caching (much longer than real-time price)
+  // Fetch historical data from our API with caching
   // Use timeFrame in the key to ensure different caching per timeframe
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     `historical-prices-${timeFrame}`,
-    // Still try to fetch data even if currentPrice is not available
-    async () => {
-      console.log('[DEBUG] SWR fetcher function called for timeFrame:', timeFrame);
-      try {
-        const result = await getHistoricalPriceData(timeFrame, currentPrice);
-        console.log('[DEBUG] SWR fetcher got result:', {
-          hasData: result ? 'yes' : 'no',
-          points: result?.data?.length || 0
-        });
-        return result;
-      } catch (err) {
-        console.error('[DEBUG] SWR fetcher error:', err instanceof Error ? err.message : 'Unknown error');
-        throw err;
-      }
-    },
+    useDirect 
+      ? directFetcher(currentPrice, timeFrame)
+      : () => apiFetcher(timeFrame),
     {
       refreshInterval: 3600000, // Refresh every hour (much less frequent than current price)
       revalidateOnFocus: false, // Don't revalidate on focus for historical data
       dedupingInterval: 300000, // 5 minutes deduplication time for switching timeframes
       focusThrottleInterval: 3600000, // Throttle focus revalidation to once per hour
-      revalidateIfStale: false, // Don't revalidate stale data automatically
-      revalidateOnReconnect: false, // Don't revalidate on reconnect
       
       // Local storage cache provider to persist data between sessions
       provider: () => {

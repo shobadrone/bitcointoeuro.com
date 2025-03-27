@@ -8,7 +8,7 @@ export default function TestFallbackPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedTest, setSelectedTest] = useState<string>('all');
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>('1y');
+  const [timeFrame, setTimeFrame] = useState<TimeFrame>('60d');
 
   // Capture console logs for display
   useEffect(() => {
@@ -110,8 +110,6 @@ export default function TestFallbackPage() {
           >
             <option value="7d">7 Days</option>
             <option value="60d">60 Days</option>
-            <option value="1y">1 Year</option>
-            <option value="5y">5 Years</option>
           </select>
         </label>
         

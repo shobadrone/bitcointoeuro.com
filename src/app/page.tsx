@@ -8,10 +8,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Bitcoin to Euro Conversion | Real-time BTC/EUR Price | bitcointoeuro.com",
-  description: "Convert Bitcoin to Euro with real-time exchange rates. Get accurate BTC to EUR price data, conversion tools, and trusted exchange information.",
+  description: "Bitcoin to Euro information with calculator, historic data and real-time exchange rates. Get accurate BTC to EUR exchange information and exchange options.",
   openGraph: {
     title: "Bitcoin to Euro Conversion | Real-time BTC/EUR Price",
-    description: "Convert Bitcoin to Euro with real-time exchange rates and accurate data.",
+    description: "Bitcoin to Euro information with calculator, historic data and real-time exchange rates. Get accurate BTC to EUR exchange information and exchange options.",
     type: "website",
   }
 };

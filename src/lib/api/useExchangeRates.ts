@@ -20,9 +20,10 @@ export default function useExchangeRates(refreshInterval = 60000) { // Default r
     {
       refreshInterval,
       revalidateOnFocus: false, // Don't revalidate on focus to reduce API calls
-      dedupingInterval: 30000, // Deduplicate requests within 30 seconds
+      dedupingInterval: 45000, // Deduplicate requests within 45 seconds
       focusThrottleInterval: 60000, // Throttle focus revalidation
       errorRetryCount: 3, // Only retry 3 times on error
+      revalidateIfStale: false, // Don't automatically revalidate stale data
       
       // Persist cache in localStorage to maintain data between page loads
       provider: () => {
